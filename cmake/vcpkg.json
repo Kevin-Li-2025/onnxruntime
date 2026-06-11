@@ -100,6 +100,15 @@
     "webgpu-ep-wgsl-template-dynamic": {
       "description": "Build with WebGPU EP with dynamic WGSL template code generator",
       "dependencies": ["duktape"]
+    },
+    "telemetry": {
+      "description": "Build with 1DS telemetry support (cpp-client-telemetry) on non-Windows platforms",
+      "dependencies": [
+        {
+          "name": "cpp-client-telemetry",
+          "platform": "!windows & !emscripten & !uwp"
+        }
+      ]
     }
   },
   "overrides": [
