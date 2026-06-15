@@ -228,7 +228,7 @@ def number_of_flash_nvcc_threads(args):
 # See https://learn.microsoft.com/en-us/vcpkg/commands/install
 def generate_vcpkg_install_options(build_dir, args):
     # NOTE: each option string should not contain any whitespace.
-    vcpkg_install_options = ["--x-feature=tests"]
+    vcpkg_install_options = ["--debug", "--x-feature=tests"]
     if args.use_acl:
         vcpkg_install_options.append("--x-feature=acl-ep")
     if args.use_azure:
