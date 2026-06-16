@@ -7,6 +7,7 @@
 #include "core/graph/onnx_protobuf.h"
 #include "core/providers/common.h"
 #include "core/common/inlined_containers.h"
+#include "core/graph/data_propagation/data_propagation_value_utils.h"
 
 namespace onnxruntime {
 
@@ -34,6 +35,23 @@ Status UnsqueezeOpDataPropagation::infer() {
   } else if (input_0->GetInferredShapeValues().has_value()) {
     const auto& tensor_shape_proto = input_0->GetInferredShapeValues().value();
 
+    // Decline when unsqueezing a single-element (scalar-like, rank-1 [1]) value would yield a
+    // rank >= 2 result the values channel cannot faithfully represent (it would otherwise fabricate
+    // a misleading [1, value]). The decision is a pure function so it can be unit-tested directly.
+    //
+    // There is intentionally NO graph-level (end-to-end) test for this decline: the only input it
+    // changes behavior on is a single-element rank-1 value, whose unsqueezed result is rank >= 2
+    // ([1, K]); no legal ONNX shape-consumer accepts a rank >= 2 shape/data input, so the
+    // declined-vs-[1, K] difference cannot legally flow anywhere observable, and
+    // CleanUpShapeValuesFromDataPropagation wipes both channels at the end of Graph::Resolve() so
+    // the NodeArg cannot be inspected post-load either. The decision is locked instead by the pure
+    // predicate ShouldDeclineUnsqueezeSingleValue (see ShouldDeclineUnsqueezeSingleValueTest);
+    // full-suite-green is only the no-regression backstop. Multi-element shape vectors are
+    // unaffected.
+    if (ShouldDeclineUnsqueezeSingleValue(tensor_shape_proto.dim_size())) {
+      return Status::OK();
+    }
+
     // The TensorShapeProto (inferred shape values) should have rank > 0 and
     // all the dimensions have values (not symbolic)
     if (tensor_shape_proto.dim_size() > 0) {
@@ -54,7 +72,8 @@ Status UnsqueezeOpDataPropagation::infer() {
       if (node_.InputDefs().size() > 1) {
         const auto* input_1 = node_.InputDefs()[1];
         ORT_TRY {
-          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes));
+          [[maybe_unused]] int axes_num_dims = -1;
+          ORT_RETURN_IF_ERROR(get_initialized_input_values_func_(input_1->Name(), axes, axes_num_dims));
         }
         ORT_CATCH(const std::exception& ex) {
           ORT_HANDLE_EXCEPTION([&]() {
