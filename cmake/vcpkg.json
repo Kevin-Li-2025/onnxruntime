@@ -58,7 +58,6 @@
     "pybind11",
     "re2",
     "safeint",
-    "utf8-range",
     {
       "name": "vcpkg-cmake",
       "host": true
@@ -123,6 +122,10 @@
     {
       "name": "duktape",
       "version": "2.7.0#2"
+    },
+    {
+      "name": "mimalloc",
+      "version": "2.2.3"
     }
   ]
 }
